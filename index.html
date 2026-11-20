@@ -1,0 +1,626 @@
+<title>Swift文法クイズ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* レイアウト: ホーム（習得率+モード選択）とクイズを1画面ずつ切り替えるモバイルカード */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #eef1f4;
+  --fg: #1a2430;
+  --muted: #5d6b7a;
+  --line: #d9e0e7;
+  --accent: #f05138;
+  --accent-ink: #ffffff;
+  --code-bg: #1f2630;
+  --code-fg: #e6edf3;
+  --code-hi: #ffd33d;
+  --good: #1f9d55;
+  --good-bg: #e4f5ec;
+  --bad: #d64545;
+  --bad-bg: #fbe8e8;
+  --warn: #e08a1e;
+  --track: #d9e0e7;
+  --shadow: 0 1px 3px rgba(20,30,45,.08), 0 6px 20px rgba(20,30,45,.06);
+  --font-ui: "Hiragino Sans", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  --font-code: ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141a; --surface: #1a212b; --surface-2: #222b36;
+    --fg: #e7edf3; --muted: #9aa7b4; --line: #2d3742;
+    --accent: #ff6a4d; --accent-ink: #1a1008;
+    --code-bg: #0b0f14; --code-fg: #e6edf3; --code-hi: #ffd33d;
+    --good: #52c17f; --good-bg: #16261d; --bad: #ef6b6b; --bad-bg: #2a1718;
+    --warn: #e9a84a; --track: #2d3742;
+    --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141a; --surface: #1a212b; --surface-2: #222b36;
+  --fg: #e7edf3; --muted: #9aa7b4; --line: #2d3742;
+  --accent: #ff6a4d; --accent-ink: #1a1008;
+  --code-bg: #0b0f14; --code-fg: #e6edf3; --code-hi: #ffd33d;
+  --good: #52c17f; --good-bg: #16261d; --bad: #ef6b6b; --bad-bg: #2a1718;
+  --warn: #e9a84a; --track: #2d3742;
+  --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-ui); line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px); z-index: 20; background: var(--accent);
+}
+
+/* ===== ヘッダー ===== */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+  background: var(--accent); color: var(--accent-ink);
+  padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.topbar .inner {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  max-width: 560px; margin: 0 auto;
+}
+.brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.brand b { font-size: 1.02rem; font-weight: 800; letter-spacing: .02em; white-space: nowrap; cursor: pointer; }
+.brand span { font-size: .72rem; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.score-pill {
+  font-variant-numeric: tabular-nums; background: rgba(0,0,0,.18);
+  border-radius: 999px; padding: 3px 11px; font-size: .8rem; font-weight: 700; white-space: nowrap;
+}
+.progress {
+  height: 4px; background: rgba(0,0,0,.18); border-radius: 999px;
+  margin-top: 8px; overflow: hidden; max-width: 560px; margin-inline: auto;
+}
+.progress i { display: block; height: 100%; background: var(--accent-ink); width: 0; transition: width .35s ease; }
+
+main {
+  max-width: 560px; margin: 0 auto; padding-block: 18px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 16px; box-shadow: var(--shadow); padding: 18px 16px 16px;
+}
+
+/* ===== ホーム：習得率リング ===== */
+.hero { text-align: center; padding: 6px 4px 2px; }
+.hero h1 { font-size: 1.15rem; margin: 0 0 2px; }
+.hero p.lead { color: var(--muted); font-size: .82rem; margin: 0 0 16px; }
+.ring-wrap { display: flex; justify-content: center; margin: 2px 0 6px; }
+.ring { position: relative; width: 168px; height: 168px; }
+.ring svg { transform: rotate(-90deg); display: block; }
+.ring .center {
+  position: absolute; inset: 0; display: grid; place-content: center; text-align: center;
+}
+.ring .pct { font-size: 2.5rem; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+.ring .cap { font-size: .72rem; color: var(--muted); font-weight: 700; letter-spacing: .04em; margin-top: 3px; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin: 16px 0 4px; }
+.stat { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 11px 6px; text-align: center; }
+.stat .n { font-size: 1.4rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat .l { font-size: .68rem; color: var(--muted); font-weight: 700; margin-top: 2px; }
+.stat.mastered .n { color: var(--good); }
+.stat.weak .n { color: var(--bad); }
+.stat.untried .n { color: var(--muted); }
+
+/* モード選択 */
+.modes { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.mode {
+  display: flex; align-items: center; gap: 13px; width: 100%; text-align: left;
+  background: var(--surface); color: var(--fg);
+  border: 1.5px solid var(--line); border-radius: 14px; padding: 14px;
+  cursor: pointer; transition: border-color .15s, transform .05s;
+}
+.mode:active { transform: scale(.995); }
+.mode:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+.mode:hover:not(:disabled) { border-color: var(--accent); }
+.mode:disabled { opacity: .45; cursor: default; }
+.mode .ic { flex: none; width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; font-size: 1.3rem; background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.mode.weak .ic { background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.mode .body { min-width: 0; flex: 1; }
+.mode .body b { display: block; font-size: .96rem; }
+.mode .body small { color: var(--muted); font-size: .76rem; }
+.mode .go { flex: none; color: var(--muted); font-weight: 900; font-size: 1.1rem; }
+.home-note { text-align: center; color: var(--muted); font-size: .72rem; margin-top: 18px; line-height: 1.7; }
+.reset-link { background: none; border: none; color: var(--muted); font-size: .74rem; text-decoration: underline; cursor: pointer; font-family: var(--font-ui); margin-top: 10px; }
+
+/* ===== クイズ ===== */
+.meta { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.tag { font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 999px; padding: 3px 9px; }
+.tag.mode-tag { color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); text-transform: none; }
+.qnum { font-size: .75rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
+.prompt { font-size: 1rem; font-weight: 700; margin: 0 0 12px; text-wrap: balance; }
+.code {
+  background: var(--code-bg); color: var(--code-fg); font-family: var(--font-code);
+  font-size: .82rem; line-height: 1.7; border-radius: 12px; padding: 13px 14px;
+  overflow-x: auto; margin: 0 0 16px; white-space: pre; tab-size: 2;
+}
+.code .blank { display: inline-block; min-width: 2.4em; text-align: center; color: var(--code-hi); border-bottom: 2px dashed var(--code-hi); font-weight: 700; padding: 0 4px; }
+.code .cmt { color: #7f8c9a; }
+
+.choices { display: flex; flex-direction: column; gap: 9px; }
+.choice {
+  display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+  background: var(--surface-2); color: var(--fg); border: 1.5px solid var(--line);
+  border-radius: 12px; padding: 12px 13px; font-family: var(--font-code); font-size: .9rem;
+  cursor: pointer; transition: border-color .15s, background .15s, transform .05s;
+}
+.choice:active { transform: scale(.99); }
+.choice:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+.choice .key { flex: none; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 7px; background: var(--surface); border: 1px solid var(--line); font-family: var(--font-ui); font-weight: 700; font-size: .78rem; color: var(--muted); }
+.choice .txt { min-width: 0; word-break: break-word; }
+.choice:hover:not(:disabled) { border-color: var(--accent); }
+.choice:disabled { cursor: default; }
+.choice.correct { border-color: var(--good); background: var(--good-bg); }
+.choice.correct .key { background: var(--good); color: #fff; border-color: var(--good); }
+.choice.wrong { border-color: var(--bad); background: var(--bad-bg); }
+.choice.wrong .key { background: var(--bad); color: #fff; border-color: var(--bad); }
+.choice.correct .mark, .choice.wrong .mark { margin-left: auto; font-weight: 800; font-family: var(--font-ui); }
+.choice.correct .mark { color: var(--good); }
+.choice.wrong .mark { color: var(--bad); }
+
+/* ヒント */
+.hint-row { margin-top: 13px; }
+.hint-btn { display: inline-flex; align-items: center; gap: 7px; background: none; border: 1.5px dashed color-mix(in srgb, var(--accent) 50%, var(--line)); color: var(--accent); border-radius: 999px; padding: 7px 14px; font-family: var(--font-ui); font-weight: 700; font-size: .82rem; cursor: pointer; }
+.hint-btn:active { transform: scale(.98); }
+.hint-btn:disabled { opacity: .5; cursor: default; }
+.hint-box { margin-top: 10px; border-radius: 12px; padding: 11px 13px; font-size: .85rem; background: color-mix(in srgb, var(--accent) 9%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+.hint-box .head { font-weight: 800; color: var(--accent); margin-bottom: 2px; font-size: .78rem; }
+
+.explain { margin-top: 14px; border-radius: 12px; padding: 12px 13px; font-size: .86rem; border: 1px solid var(--line); background: var(--surface-2); }
+.explain .head { font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.explain.ok .head { color: var(--good); }
+.explain.ng .head { color: var(--bad); }
+.explain code { font-family: var(--font-code); background: color-mix(in srgb, var(--accent) 14%, transparent); padding: 1px 5px; border-radius: 5px; font-size: .92em; }
+
+.actions { margin-top: 16px; display: flex; gap: 10px; }
+.btn { flex: 1; border: none; border-radius: 12px; padding: 13px; font-family: var(--font-ui); font-weight: 800; font-size: .95rem; cursor: pointer; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.primary:disabled { opacity: .4; cursor: default; }
+.btn.ghost { background: var(--surface-2); color: var(--fg); border: 1px solid var(--line); }
+
+.result { text-align: center; padding: 10px 6px 4px; }
+.result .big { font-size: 3rem; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.result .sub { color: var(--muted); font-size: .9rem; margin-top: 2px; }
+.result .msg { font-size: 1.05rem; font-weight: 700; margin: 16px 0 6px; text-wrap: balance; }
+.review { text-align: left; margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+.review .row { display: flex; gap: 10px; align-items: flex-start; font-size: .85rem; padding: 10px 11px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); }
+.review .row .ic { flex: none; font-weight: 900; }
+.review .row.ok .ic { color: var(--good); }
+.review .row.ng .ic { color: var(--bad); }
+.review .row .t b { display: block; font-size: .72rem; color: var(--muted); font-weight: 700; margin-bottom: 1px; }
+.review .row .t code { font-family: var(--font-code); }
+</style>
+
+<header class="topbar">
+  <div class="inner">
+    <div class="brand"><b id="homeLink">Swift文法クイズ</b><span id="unitLabel">型・制御構文 / Optional</span></div>
+    <div class="score-pill" id="scorePill" hidden>0 / 0</div>
+  </div>
+  <div class="progress" id="progressWrap" hidden><i id="progBar"></i></div>
+</header>
+
+<main id="app"></main>
+
+<script>
+/* ===== ホーム画面に追加したときのアイコン / 名前（PWA） ===== */
+/* Canvas でアイコンを描き、data URI にして apple-touch-icon と manifest に差し込みます。
+   外部画像は CSP で読めないため、画像は実行時に生成します。 */
+(function setupHomeScreenIcon(){
+  function drawIcon(size, rounded){
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = size;
+    const x = cv.getContext("2d");
+    const s = size;
+    // 背景（Swift オレンジのグラデーション）
+    if(rounded){
+      const r = s*0.22, g = x.createLinearGradient(0,0,s,s);
+      g.addColorStop(0,"#ff6a4d"); g.addColorStop(1,"#f05138");
+      x.fillStyle = g;
+      x.beginPath();
+      x.moveTo(r,0); x.arcTo(s,0,s,s,r); x.arcTo(s,s,0,s,r);
+      x.arcTo(0,s,0,0,r); x.arcTo(0,0,s,0,r); x.closePath(); x.fill();
+    } else {
+      x.fillStyle = "#f05138"; x.fillRect(0,0,s,s);
+    }
+    // コードの波括弧 { }
+    x.strokeStyle = "rgba(255,255,255,.95)";
+    x.lineWidth = s*0.055; x.lineCap = "round"; x.lineJoin = "round";
+    const cy = s*0.44, h = s*0.26, bw = s*0.10;
+    function brace(cx, dir){
+      x.beginPath();
+      x.moveTo(cx + dir*bw, cy - h);
+      x.quadraticCurveTo(cx, cy - h, cx, cy - h*0.45);
+      x.quadraticCurveTo(cx, cy, cx - dir*bw*0.6, cy);
+      x.quadraticCurveTo(cx, cy, cx, cy + h*0.45);
+      x.quadraticCurveTo(cx, cy + h, cx + dir*bw, cy + h);
+      x.stroke();
+    }
+    brace(s*0.30, 1);
+    brace(s*0.70, -1);
+    // 中央のチェック（クイズの正解マーク）
+    x.beginPath();
+    x.lineWidth = s*0.07;
+    x.moveTo(s*0.41, cy + s*0.01);
+    x.lineTo(s*0.47, cy + s*0.09);
+    x.lineTo(s*0.60, cy - s*0.09);
+    x.stroke();
+    // 下部に "SWIFT"
+    x.fillStyle = "rgba(255,255,255,.95)";
+    x.font = "700 " + (s*0.13) + "px -apple-system, 'Hiragino Sans', sans-serif";
+    x.textAlign = "center"; x.textBaseline = "middle";
+    x.fillText("SWIFT", s*0.5, s*0.78);
+    return cv.toDataURL("image/png");
+  }
+
+  function addLink(rel, href, extra){
+    const l = document.createElement("link");
+    l.rel = rel; l.href = href;
+    if(extra) for(const k in extra) l.setAttribute(k, extra[k]);
+    document.head.appendChild(l);
+  }
+  function addMeta(name, content){
+    const m = document.createElement("meta");
+    m.name = name; m.content = content; document.head.appendChild(m);
+  }
+
+  try {
+    const icon180 = drawIcon(180, false); // iOS は角丸を自動で付ける
+    const icon192 = drawIcon(192, true);
+    const icon512 = drawIcon(512, true);
+
+    // iOS Safari（ホーム画面に追加）
+    addLink("apple-touch-icon", icon180);
+    addMeta("apple-mobile-web-app-capable", "yes");
+    addMeta("apple-mobile-web-app-status-bar-style", "default");
+    addMeta("apple-mobile-web-app-title", "Swift文法");
+    addMeta("theme-color", "#f05138");
+
+    // Android Chrome（manifest を data/blob で用意）
+    const manifest = {
+      name: "Swift文法クイズ",
+      short_name: "Swift文法",
+      display: "standalone",
+      background_color: "#f4f6f8",
+      theme_color: "#f05138",
+      icons: [
+        { src: icon192, sizes: "192x192", type: "image/png" },
+        { src: icon512, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+      ]
+    };
+    try {
+      const blob = new Blob([JSON.stringify(manifest)], {type:"application/manifest+json"});
+      addLink("manifest", URL.createObjectURL(blob));
+    } catch(e){ /* manifest が CSP で弾かれても iOS 側は有効 */ }
+  } catch(e){ /* アイコン生成に失敗してもクイズ本体は動く */ }
+})();
+
+/* ===== 問題データ（week01: 型・制御構文・コレクション / week02: Optional より） ===== */
+const QUESTIONS = [
+  { unit:"型と制御構文", prompt:"定数 passingScore に Int 型を型注釈付きで宣言します。空欄に入るのは？",
+    code:["let passingScore@@ 60"], choices:[": Int =","= Int:",": Int ->","as Int ="], answer:0,
+    hint:"「名前 コロン 型 イコール 値」の順。型は Int です。",
+    explain:"型注釈は <code>名前: 型</code> の形。<code>let passingScore: Int = 60</code> と書きます。型を書かなくても推論されますが、明示するときはコロンで型を続けます。" },
+  { unit:"型変換", prompt:"Int と Double はそのまま計算できません。passingScore(Int) を Double にして引き算します。",
+    code:["let passingScore = 60","let targetAverage = 75.5",'print("差: \\(targetAverage - @@)")'],
+    choices:["Double(passingScore)","passingScore.toDouble()","(Double)passingScore","passingScore as Double"], answer:0,
+    hint:"変換先の型を関数のように書いて包みます。Java のキャストとは書き方が違います。",
+    explain:"Swift に暗黙の型変換はありません。<code>Double(passingScore)</code> のように、変換先の型をイニシャライザのように書いて変換します。" },
+  { unit:"配列", prompt:"配列 scores の要素数を取り出します。空欄は？",
+    code:["let scores = [82, 55, 91, 60, 72]",'print("点数 \\(scores@@) 個")'], choices:[".count",".length",".size()",".length()"], answer:0,
+    hint:"Java の length / size() とは違う、プロパティ1語です。",
+    explain:"Swift の配列・辞書・文字列の要素数は <code>.count</code> プロパティです（Java の <code>length</code> / <code>size()</code> とは違います）。" },
+  { unit:"配列", prompt:"もとの配列は変えずに、降順に並べ替えた新しい配列を得ます。",
+    code:["let scores = [82, 55, 91, 60, 72]","let ranking = scores@@"], choices:[".sorted(by: >)",".sort(by: >)",".sorted(>: by)",".reverse()"], answer:0,
+    hint:"「新しい配列を返す」方は過去分詞形（-ed）。もとを変える方は () なしの命令形。",
+    explain:"<code>sorted(by:)</code> は並べ替えた新しい配列を返し、もとは変えません。末尾に () の付かない <code>sort()</code> は自分自身を並べ替える破壊的メソッドです。" },
+  { unit:"範囲と繰り返し", prompt:"添字 i を 0 から names.count の手前まで回します。空欄に入る範囲は？",
+    code:["for i in @@ {",'  print("\\(i + 1)番 \\(names[i])")',"}"], choices:["0..<names.count","0...names.count","0, names.count","0 to names.count"], answer:0,
+    hint:"添字は 0 から count-1 まで。末尾を含まない範囲演算子を使います。",
+    explain:"<code>0..<names.count</code> は末尾を含まない範囲（0 〜 count-1）。<code>0...n</code> は n を含むので、添字に使うと範囲外アクセスになります。" },
+  { unit:"範囲と繰り返し", prompt:"配列を回しながら、合格点(60以上)の要素だけを処理します。if を使わずに書くには？",
+    code:["for score in scores @@ score >= 60 {",'  print("合格点: \\(score)")',"}"], choices:["where","if","filter","case"], answer:0,
+    hint:"「〜のとき」を表す英単語1語を for の後ろに続けます。",
+    explain:"<code>for x in a where 条件</code> は、条件に合う要素だけを回します。Java のループ内に if を書くのに相当する、Swift の書き方です。" },
+  { unit:"制御の流れ", prompt:"60点は数えずに飛ばし、90点超が出たらループを止めます。空欄①②は？",
+    code:["for score in scores {","  if score == 60 { ① }","  if score > 90 { ② }","  counted += 1","}"], choices:["① continue  ② break","① break  ② continue","① skip  ② stop","① return  ② break"], answer:0,
+    hint:"①はこの回だけスキップ、②はループ自体を終了。",
+    explain:"<code>continue</code> はその回だけ飛ばして次へ、<code>break</code> はループ自体を抜けます。60は飛ばす→continue、90超で止める→break。" },
+  { unit:"switch", prompt:"点数を範囲で分岐します。80以上90未満の case の空欄は？",
+    code:["switch target {","case 90...100: print(\"A\")","case @@: print(\"B\")","default: print(\"C\")","}"], choices:["80..<90","80...90","80,90","80 <= 90"], answer:0,
+    hint:"90 を含めてはいけません。末尾を含まない範囲演算子を使います。",
+    explain:"<code>80..<90</code> は 80〜89（90を含まない）。case には範囲を直接書けます。Swift の switch は break 不要で、網羅していないとコンパイルエラーになります。" },
+  { unit:"辞書", prompt:"名前から点数を引く辞書を、型注釈付きで宣言します。空欄の型は？",
+    code:["let scoreOf: @@ = [",'  "電子太郎": 82,','  "山田一郎": 91,',"]"], choices:["[String: Int]","[String, Int]","Map<String, Int>","{String: Int}"], answer:0,
+    hint:"角括弧の中に「キーの型 コロン 値の型」を書きます。",
+    explain:"Swift の辞書型は <code>[キーの型: 値の型]</code>。ここでは <code>[String: Int]</code> です。Java の <code>Map&lt;String,Integer&gt;</code> にあたります。" },
+  { unit:"Optional", prompt:"辞書の添字アクセスが返す型は？ taroScore の型を答えてください。",
+    code:['let scoreOf: [String: Int] = ["電子太郎": 82]','let taroScore = scoreOf["電子太郎"]',"// taroScore の型は？"], choices:["Int?","Int","Optional","[Int]"], answer:0,
+    hint:"キーが無いかもしれないので、Int に ? が付いた型になります。",
+    explain:"辞書の添字は、キーが無いかもしれないので <code>Int?</code>（Optional&lt;Int&gt;）を返します。中身の Int そのものではなく「包み」が返ります。" },
+  { unit:"Optional", prompt:"まだ値が無い（未受験の）再テスト点数を Int の Optional で宣言します。空欄①②は？",
+    code:["var retakeScore: ① = ②"], choices:["① Int?  ② nil","① Int  ② 0","① Int?  ② null","① Optional  ② empty"], answer:0,
+    hint:"①は ? の付いた型、②は「値が無い」を表す Swift の語（null ではありません）。",
+    explain:"「値が無いかもしれない Int」は <code>Int?</code>。値が無い状態は <code>nil</code> で表します（Java の null に近いが、? を付けた型にしか入りません）。" },
+  { unit:"Optional", prompt:"辞書に値があるときだけ中に入り、取り出した値を score で使います。空欄は？",
+    code:["@@ score = scoreOf[\"電子太郎\"] {",'  print("\\(score) 点です")',"} else {",'  print("名簿にありません")',"}"], choices:["if let","if","while let","let if"], answer:0,
+    hint:"if と組み合わせて Optional を開く2語。値があれば取り出して中へ進みます。",
+    explain:"<code>if let 名前 = Optional</code> は、値があれば取り出して <code>名前</code> に入れ、中へ進みます。nil なら else へ。Optional を安全に開く基本形です。" },
+  { unit:"Optional", prompt:"名簿に無い人は 0 点として扱います。既定値を与える演算子の空欄は？",
+    code:['let absentScore = scoreOf["鈴木"] @@ 0'], choices:["??","?:","||","!!"], answer:0,
+    hint:"クエスチョンマークを2つ並べた演算子。左が nil のとき右を使います。",
+    explain:"<code>??</code> はnil合体演算子。左が nil のときだけ右の既定値を使います。<code>scoreOf[\"鈴木\"] ?? 0</code> は、無ければ 0。" },
+  { unit:"Optional", prompt:"関数の先頭で、値が無ければ早めに return します。空欄は？",
+    code:["func describe(name: String) -> String {","  @@ score = table[name] else {",'    return "名簿にありません"',"  }",'  return "\\(score) 点"',"}"], choices:["guard let","if let","guard","let guard"], answer:0,
+    hint:"「守る」意味の語 + let。取り出せなければ else で return、成功なら以降ずっと使えます。",
+    explain:"<code>guard let 名前 = Optional else { return }</code> は、取り出せなければ抜け、成功すれば <code>名前</code> をその後ずっと使えます。早期リターン向きです。" },
+  { unit:"Optional", prompt:"Optional のまま <code>!</code> で強制的に開くと、中身が nil のとき何が起きますか？",
+    code:['let dangerous = scoreOf["鈴木"]!',"// 鈴木 は名簿に無い"], choices:["実行時にクラッシュして止まる","nil が代入される","0 が代入される","コンパイルできない"], answer:0,
+    hint:"! は「絶対に中身がある」という宣言。実際に nil だったら安全には済みません。",
+    explain:"<code>!</code> は中身を強制的に取り出します。nil だと <code>Fatal error: Unexpectedly found nil</code> で実行時にクラッシュ。教材では ! は使わず、if let / guard let / ?? を使います。" }
+];
+
+/* ===== 習得状況の保存（localStorage。各問の直近結果を記録） ===== */
+const STORE_KEY = "swiftQuizStats_v1";
+// stats[i] = "mastered" | "weak" | undefined(未学習)
+function loadStats(){
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+function saveStats(s){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch(e){}
+}
+let stats = loadStats();
+
+function counts(){
+  let mastered=0, weak=0;
+  for(let i=0;i<QUESTIONS.length;i++){
+    if(stats[i]==="mastered") mastered++;
+    else if(stats[i]==="weak") weak++;
+  }
+  return { mastered, weak, untried: QUESTIONS.length-mastered-weak, total: QUESTIONS.length };
+}
+function weakIndexes(){
+  const a=[]; for(let i=0;i<QUESTIONS.length;i++) if(stats[i]==="weak") a.push(i); return a;
+}
+
+/* ===== 画面要素 ===== */
+const app = document.getElementById("app");
+const scorePill = document.getElementById("scorePill");
+const progressWrap = document.getElementById("progressWrap");
+const progBar = document.getElementById("progBar");
+document.getElementById("homeLink").addEventListener("click", renderHome);
+
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function renderCode(lines){
+  return lines.map(line => {
+    let html = esc(line)
+      .replace(/@@/g,'<span class="blank">?</span>')
+      .replace(/①/g,'<span class="blank">①</span>')
+      .replace(/②/g,'<span class="blank">②</span>');
+    return html.replace(/(\/\/[^\n]*)/g,'<span class="cmt">$1</span>');
+  }).join("\n");
+}
+
+/* ===== ホーム画面 ===== */
+function renderHome(){
+  scorePill.hidden = true; progressWrap.hidden = true;
+  const c = counts();
+  const pct = Math.round(c.mastered / c.total * 100);
+  const R = 74, C = 2 * Math.PI * R;
+  const off = C * (1 - pct/100);
+  const hasWeak = c.weak > 0;
+
+  app.innerHTML = `
+    <div class="card hero">
+      <h1>今の習得率</h1>
+      <p class="lead">正解した問題が「習得済み」。間違えた問題は「苦手」に入ります。</p>
+      <div class="ring-wrap">
+        <div class="ring">
+          <svg width="168" height="168" viewBox="0 0 168 168">
+            <circle cx="84" cy="84" r="${R}" fill="none" stroke="var(--track)" stroke-width="14"/>
+            <circle cx="84" cy="84" r="${R}" fill="none" stroke="var(--accent)" stroke-width="14"
+              stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>
+          </svg>
+          <div class="center">
+            <div class="pct">${pct}<span style="font-size:1.1rem">%</span></div>
+            <div class="cap">習得済み ${c.mastered}/${c.total}</div>
+          </div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat mastered"><div class="n">${c.mastered}</div><div class="l">習得済み</div></div>
+        <div class="stat weak"><div class="n">${c.weak}</div><div class="l">苦手</div></div>
+        <div class="stat untried"><div class="n">${c.untried}</div><div class="l">未学習</div></div>
+      </div>
+    </div>
+
+    <div class="modes">
+      <button class="mode" data-mode="order">
+        <span class="ic">📋</span>
+        <span class="body"><b>順番に全問</b><small>第1問から順に全${c.total}問</small></span>
+        <span class="go">›</span>
+      </button>
+      <button class="mode" data-mode="random">
+        <span class="ic">🎲</span>
+        <span class="body"><b>ランダム出題</b><small>全${c.total}問をシャッフルして出題</small></span>
+        <span class="go">›</span>
+      </button>
+      <button class="mode weak" data-mode="weak" ${hasWeak?"":"disabled"}>
+        <span class="ic">🔥</span>
+        <span class="body"><b>苦手問題だけ</b><small>${hasWeak?("間違えた "+c.weak+" 問を集中復習"):"今は苦手な問題はありません"}</small></span>
+        <span class="go">›</span>
+      </button>
+    </div>
+    <div style="text-align:center">
+      <button class="reset-link" id="resetBtn">学習記録をリセット</button>
+    </div>
+    <p class="home-note">出題範囲：単元1「型と制御構文、配列・辞書・範囲」／単元2「Optional」<br>（NakasenJEC/swift-grammar-code の week01・week02 より）</p>`;
+
+  document.querySelectorAll(".mode").forEach(b=>{
+    if(!b.disabled) b.addEventListener("click", ()=>startQuiz(b.dataset.mode));
+  });
+  document.getElementById("resetBtn").addEventListener("click", ()=>{
+    if(confirmReset()){ stats = {}; saveStats(stats); renderHome(); }
+  });
+  window.scrollTo({top:0});
+}
+// artifact では confirm() が使えないので簡易トグル
+let resetArmed = false;
+function confirmReset(){
+  const btn = document.getElementById("resetBtn");
+  if(!resetArmed){ resetArmed = true; btn.textContent = "もう一度押すとリセットします"; btn.style.color = "var(--bad)"; setTimeout(()=>{resetArmed=false; if(document.getElementById("resetBtn")){btn.textContent="学習記録をリセット"; btn.style.color="";}}, 3000); return false; }
+  resetArmed = false; return true;
+}
+
+/* ===== クイズ進行 ===== */
+let order = [], pos = 0, score = 0, locked = false, mode = "order", results = [];
+const MODE_LABEL = { order:"順番に全問", random:"🎲 ランダム", weak:"🔥 苦手問題" };
+
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function startQuiz(m){
+  mode = m;
+  if(m==="order") order = QUESTIONS.map((_,i)=>i);
+  else if(m==="random") order = shuffle(QUESTIONS.map((_,i)=>i));
+  else order = shuffle(weakIndexes());
+  if(order.length===0){ renderHome(); return; }
+  pos = 0; score = 0; results = [];
+  scorePill.hidden = false; progressWrap.hidden = false;
+  renderQuestion();
+}
+
+function updateHud(){
+  scorePill.textContent = score + " / " + results.length;
+  progBar.style.width = (pos / order.length * 100) + "%";
+}
+
+function renderQuestion(){
+  const qi = order[pos];
+  const q = QUESTIONS[qi];
+  locked = false;
+  app.innerHTML = `
+    <div class="card">
+      <div class="meta">
+        <span class="tag">${esc(q.unit)}</span>
+        <span class="tag mode-tag">${MODE_LABEL[mode]}</span>
+        <span class="qnum">${pos+1} / ${order.length}</span>
+      </div>
+      <p class="prompt">${q.prompt}</p>
+      <pre class="code">${renderCode(q.code)}</pre>
+      <div class="choices" id="choices">
+        ${q.choices.map((c,i)=>`
+          <button class="choice" data-i="${i}">
+            <span class="key">${"ABCD"[i]}</span>
+            <span class="txt">${esc(c)}</span>
+          </button>`).join("")}
+      </div>
+      <div class="hint-row" id="hintRow">
+        <button class="hint-btn" id="hintBtn">💡 ヒントを見る</button>
+        <div class="hint-box" id="hintBox" hidden></div>
+      </div>
+      <div id="explainSlot"></div>
+      <div class="actions" id="actions" hidden>
+        <button class="btn primary" id="nextBtn">${pos === order.length-1 ? "結果を見る" : "次の問題へ"}</button>
+      </div>
+    </div>`;
+  document.querySelectorAll(".choice").forEach(b=>b.addEventListener("click", e=>onChoose(e, qi)));
+  const hintBtn = document.getElementById("hintBtn");
+  hintBtn.addEventListener("click", ()=>{
+    const box = document.getElementById("hintBox");
+    box.innerHTML = '<div class="head">ヒント</div>' + q.hint;
+    box.hidden = false; hintBtn.disabled = true;
+  });
+  updateHud();
+  window.scrollTo({top:0});
+}
+
+function onChoose(e, qi){
+  if(locked) return;
+  locked = true;
+  document.getElementById("hintBtn").disabled = true;
+  const q = QUESTIONS[qi];
+  const picked = +e.currentTarget.dataset.i;
+  const correct = q.answer;
+  const isOk = picked === correct;
+  if(isOk) score++;
+
+  // 習得状況を更新
+  stats[qi] = isOk ? "mastered" : "weak";
+  saveStats(stats);
+
+  results.push({unit:q.unit, isOk, correct, choices:q.choices});
+  document.querySelectorAll(".choice").forEach(b=>{
+    const i = +b.dataset.i;
+    b.disabled = true;
+    if(i === correct){ b.classList.add("correct"); b.insertAdjacentHTML("beforeend",'<span class="mark">正解</span>'); }
+    else if(i === picked){ b.classList.add("wrong"); b.insertAdjacentHTML("beforeend",'<span class="mark">×</span>'); }
+  });
+  document.getElementById("explainSlot").innerHTML = `
+    <div class="explain ${isOk?"ok":"ng"}">
+      <div class="head">${isOk?"◎ 正解":"✕ 不正解"}</div>
+      <div>${q.explain}</div>
+    </div>`;
+  document.getElementById("actions").hidden = false;
+  document.getElementById("nextBtn").addEventListener("click", next);
+  updateHud();
+}
+
+function next(){
+  pos++;
+  if(pos < order.length) renderQuestion();
+  else renderResult();
+}
+
+function renderResult(){
+  progBar.style.width = "100%";
+  const pct = Math.round(score / order.length * 100);
+  let msg;
+  if(pct===100) msg = "満点！ 完璧です 🎉";
+  else if(pct>=80) msg = "よくできました";
+  else if(pct>=60) msg = "合格ライン。あと少し";
+  else msg = "復習してもう一度やってみよう";
+  const c = counts();
+  const mastery = Math.round(c.mastered / c.total * 100);
+
+  app.innerHTML = `
+    <div class="card result">
+      <div class="big">${score} / ${order.length}</div>
+      <div class="sub">このセットの正答率 ${pct}%</div>
+      <div class="msg">${msg}</div>
+      <div class="sub">全体の習得率は <b style="color:var(--accent)">${mastery}%</b>（習得済み ${c.mastered}/${c.total}・苦手 ${c.weak}）</div>
+      <div class="review">
+        ${results.map((r,i)=>`
+          <div class="row ${r.isOk?"ok":"ng"}">
+            <span class="ic">${r.isOk?"◎":"✕"}</span>
+            <div class="t">
+              <b>${i+1}問目 · ${esc(r.unit)}</b>
+              ${r.isOk ? "正解" : "正解は <code>"+esc(r.choices[r.correct])+"</code>"}
+            </div>
+          </div>`).join("")}
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="retry">もう一度</button>
+        <button class="btn primary" id="home">ホームへ</button>
+      </div>
+    </div>`;
+  document.getElementById("retry").addEventListener("click", ()=>startQuiz(mode));
+  document.getElementById("home").addEventListener("click", renderHome);
+  scorePill.textContent = score + " / " + order.length;
+  window.scrollTo({top:0});
+}
+
+renderHome();
+</script>
