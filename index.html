@@ -185,6 +185,23 @@ main {
 .choice.correct .mark { color: var(--good); }
 .choice.wrong .mark { color: var(--bad); }
 
+/* 回答方式トグル（ホーム） */
+.style-row { font-size: .72rem; color: var(--muted); font-weight: 700; margin: 18px 2px 0; }
+.style-toggle { display: flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 4px; margin-top: 6px; }
+.style-toggle button { flex: 1; border: none; background: none; padding: 10px; border-radius: 9px; font-family: var(--font-ui); font-weight: 700; font-size: .85rem; color: var(--muted); cursor: pointer; }
+.style-toggle button.on { background: var(--accent); color: var(--accent-ink); }
+
+/* キーボード入力 */
+.answer-input-wrap { display: flex; flex-direction: column; gap: 10px; }
+.answer-input { width: 100%; font-family: var(--font-code); font-size: 1rem; padding: 12px 13px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--fg); }
+.answer-input:focus { outline: none; border-color: var(--accent); }
+.answer-input:disabled { opacity: .85; }
+.len-guide { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 5px 6px; padding: 2px 2px 6px; font-family: var(--font-code); }
+.len-guide .lbl { font-size: .72rem; color: var(--muted); font-weight: 700; width: 100%; margin-bottom: 4px; font-family: var(--font-ui); }
+.slot { display: inline-block; width: 11px; height: 1.25em; border-bottom: 2px dotted var(--muted); }
+.slot.sp { border-bottom: none; position: relative; width: 13px; }
+.slot.sp::after { content: "␣"; position: absolute; left: 50%; bottom: -3px; transform: translateX(-50%); color: var(--accent); font-size: .9rem; line-height: 1; }
+
 /* ヒント */
 .hint-row { margin-top: 13px; }
 .hint-btn { display: inline-flex; align-items: center; gap: 7px; background: none; border: 1.5px dashed color-mix(in srgb, var(--accent) 50%, var(--line)); color: var(--accent); border-radius: 999px; padding: 7px 14px; font-family: var(--font-ui); font-weight: 700; font-size: .82rem; cursor: pointer; }
@@ -400,6 +417,11 @@ function saveStats(s){
 }
 let stats = loadStats();
 
+/* 回答方式: "choice"(4択) / "type"(キーボード入力) */
+let answerStyle = (()=>{ try { return localStorage.getItem("swiftQuizAnswerStyle")||"choice"; } catch(e){ return "choice"; } })();
+function setAnswerStyle(v){ answerStyle = v; try { localStorage.setItem("swiftQuizAnswerStyle", v); } catch(e){} }
+function normalizeAns(s){ return s.trim().replace(/\s+/g," "); }
+
 function counts(){
   let mastered=0, weak=0;
   for(let i=0;i<QUESTIONS.length;i++){
@@ -463,6 +485,12 @@ function renderHome(){
       </div>
     </div>
 
+    <div class="style-row">回答方式</div>
+    <div class="style-toggle" role="group" aria-label="回答方式">
+      <button data-style="choice" class="${answerStyle==='choice'?'on':''}">4択で選ぶ</button>
+      <button data-style="type" class="${answerStyle==='type'?'on':''}">⌨️ 入力する</button>
+    </div>
+
     <div class="modes">
       <button class="mode" data-mode="order">
         <span class="ic">📋</span>
@@ -487,6 +515,9 @@ function renderHome(){
 
   document.querySelectorAll(".mode").forEach(b=>{
     if(!b.disabled) b.addEventListener("click", ()=>startQuiz(b.dataset.mode));
+  });
+  document.querySelectorAll(".style-toggle button").forEach(b=>{
+    b.addEventListener("click", ()=>{ setAnswerStyle(b.dataset.style); renderHome(); });
   });
   document.getElementById("resetBtn").addEventListener("click", ()=>{
     if(confirmReset()){ stats = {}; saveStats(stats); renderHome(); }
@@ -527,6 +558,28 @@ function renderQuestion(){
   const qi = order[pos];
   const q = QUESTIONS[qi];
   locked = false;
+  const ans = q.choices[q.answer];
+  const ansChars = [...ans];
+  const slotsHTML = ansChars.map(ch => ch===" " ? '<span class="slot sp"></span>' : '<span class="slot"></span>').join("");
+  const answerUI = answerStyle === "type"
+    ? `
+      <div class="answer-input-wrap">
+        <input class="answer-input" id="answerInput" type="text" inputmode="text"
+          autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+          placeholder="空欄に入るコードを入力">
+        <div class="len-guide">
+          <span class="lbl">文字数のヒント（全 ${ansChars.length} 文字 ・ ␣＝スペース）</span>
+          ${slotsHTML}
+        </div>
+      </div>`
+    : `
+      <div class="choices" id="choices">
+        ${q.choices.map((c,i)=>`
+          <button class="choice" data-i="${i}">
+            <span class="key">${"ABCD"[i]}</span>
+            <span class="txt">${esc(c)}</span>
+          </button>`).join("")}
+      </div>`;
   app.innerHTML = `
     <div class="card">
       <div class="meta">
@@ -536,12 +589,9 @@ function renderQuestion(){
       </div>
       <p class="prompt">${q.prompt}</p>
       <pre class="code">${renderCode(q.code)}</pre>
-      <div class="choices" id="choices">
-        ${q.choices.map((c,i)=>`
-          <button class="choice" data-i="${i}">
-            <span class="key">${"ABCD"[i]}</span>
-            <span class="txt">${esc(c)}</span>
-          </button>`).join("")}
+      ${answerUI}
+      <div class="actions" id="submitRow" ${answerStyle==="type"?"":"hidden"} style="margin-top:14px">
+        <button class="btn primary" id="submitBtn">答え合わせ</button>
       </div>
       <div class="hint-row" id="hintRow">
         <button class="hint-btn" id="hintBtn">💡 ヒントを見る</button>
@@ -552,7 +602,14 @@ function renderQuestion(){
         <button class="btn primary" id="nextBtn">${pos === order.length-1 ? "結果を見る" : "次の問題へ"}</button>
       </div>
     </div>`;
-  document.querySelectorAll(".choice").forEach(b=>b.addEventListener("click", e=>onChoose(e, qi)));
+  if(answerStyle === "type"){
+    const input = document.getElementById("answerInput");
+    document.getElementById("submitBtn").addEventListener("click", ()=>onSubmitTyped(qi));
+    input.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); onSubmitTyped(qi); } });
+    setTimeout(()=>{ try{ input.focus(); }catch(e){} }, 60);
+  } else {
+    document.querySelectorAll(".choice").forEach(b=>b.addEventListener("click", e=>onChoose(e, qi)));
+  }
   const hintBtn = document.getElementById("hintBtn");
   hintBtn.addEventListener("click", ()=>{
     const box = document.getElementById("hintBox");
@@ -587,6 +644,34 @@ function onChoose(e, qi){
   document.getElementById("explainSlot").innerHTML = `
     <div class="explain ${isOk?"ok":"ng"}">
       <div class="head">${isOk?"◎ 正解":"✕ 不正解"}</div>
+      <div>${q.explain}</div>
+    </div>`;
+  document.getElementById("actions").hidden = false;
+  document.getElementById("nextBtn").addEventListener("click", next);
+  updateHud();
+}
+
+function onSubmitTyped(qi){
+  if(locked) return;
+  const input = document.getElementById("answerInput");
+  if(input.value.trim() === ""){ try{ input.focus(); }catch(e){} return; }
+  locked = true;
+  document.getElementById("hintBtn").disabled = true;
+  const q = QUESTIONS[qi];
+  const ans = q.choices[q.answer];
+  const typed = input.value;
+  const isOk = normalizeAns(typed) === normalizeAns(ans);
+  if(isOk) score++;
+  stats[qi] = isOk ? "mastered" : "weak";
+  saveStats(stats);
+  results.push({unit:q.unit, isOk, correct:q.answer, choices:q.choices});
+  input.disabled = true;
+  input.style.borderColor = isOk ? "var(--good)" : "var(--bad)";
+  document.getElementById("submitRow").hidden = true;
+  document.getElementById("explainSlot").innerHTML = `
+    <div class="explain ${isOk?"ok":"ng"}">
+      <div class="head">${isOk?"◎ 正解":"✕ 不正解"}</div>
+      ${isOk ? "" : `<div style="margin-bottom:6px">あなたの入力：<code>${esc(typed)}</code><br>正解：<code>${esc(ans)}</code></div>`}
       <div>${q.explain}</div>
     </div>`;
   document.getElementById("actions").hidden = false;
